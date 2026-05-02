@@ -1,2 +1,9 @@
 material/
 .ipynb_checkpoints/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Anaconda Navigator project cache
+data/anaconda_projects/
