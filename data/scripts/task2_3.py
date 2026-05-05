@@ -15,8 +15,15 @@
 # Libraries used:
 # * pandas
 # * numpy
+# * scipy (`sparse`, `sparse.csr_matrix`)
+# * matplotlib (`pyplot`)
+# * seaborn
 # * gensim (`downloader`, `corpora.Dictionary`, `models.TfidfModel`)
+# * scikit-learn (`model_selection`, `linear_model`, `svm`, `ensemble`, `compose`, `preprocessing`, `impute`, `pipeline`, `metrics`)
 # * collections (`Counter`)
+# * IPython.display (`display`)
+# * joblib
+# * Standard library: `os`, `re`, `shutil`, `warnings`
 # 
 # ## Task 2 - Introduction
 # 
