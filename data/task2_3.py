@@ -388,7 +388,7 @@ SCORING = ["accuracy", "f1_macro"]
 # | Keep all 61,284 rows (including 1,911 with empty `review_text`) | Empty rows produce all-zero vectors; classifier predicts the majority class for them. Keeping them gives a fair common denominator across Q1, Q2(a), Q2(b), Q2(c) |
 # | `LogisticRegression` as primary classifier | Spec page 4 explicitly suggests it; strong linear baseline appropriate for both high-dim sparse BoW and low-dim dense embeddings |
 # | Add `LinearSVC` and `RandomForest(n_estimators=100)` as secondary classifiers (Q1 only) | RUBRIC HD requires "strong experiments"; tests whether ranking is classifier-dependent. RF tree count capped at 100 to keep total Q1 runtime reasonable on sparse 60k×8k BoW |
-# | `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` | Spec requires 5-fold; stratified preserves the ~72/28 class ratio per fold; fixed seed for reproducibility |
+# | `StratifiedKFold(n_splits=5, shuffle=True, random_state=26)` | Spec requires 5-fold; stratified preserves the ~72/28 class ratio per fold; fixed seed for reproducibility |
 # | Report **macro-F1** as headline metric, accuracy as secondary | Macro-F1 is robust to the class imbalance verified in 3.1.5; raw accuracy can be ≈72% by predicting "buyer" for everyone |
 # | Report **mean ± std** across folds | Std signals stability; small mean delta within the std band is not a meaningful difference |
 # | Add confusion matrix + per-class P/R/F1 + ROC-AUC for the best (rep, clf) combination | RUBRIC HD "strong evaluations" - accuracy alone hides class-specific failures |
@@ -1091,5 +1091,5 @@ print(classification_report(y, y_pred_q2, target_names=["not buyer", "is buyer"]
 # `review_rating` was deliberately excluded from the extras to avoid label leakage (the same user provides both the rating and the buy decision).
 # 
 # ### Reproducibility
-# All experiments use a fixed seed (`random_state=42`) and 5-fold `StratifiedKFold`. The structured-feature `ColumnTransformer` is fit once on the full dataframe; this is a mild leakage trade-off that does not affect the headline conclusion since the lift from metadata (~0.20 F1) is far larger than any imputer/scaler bias.
+# All experiments use a fixed seed (`random_state=26`) and 5-fold `StratifiedKFold`. The structured-feature `ColumnTransformer` is fit once on the full dataframe; this is a mild leakage trade-off that does not affect the headline conclusion since the lift from metadata (~0.20 F1) is far larger than any imputer/scaler bias.
 # 
