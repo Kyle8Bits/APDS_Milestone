@@ -1,0 +1,10 @@
+core/venv/
+core/__pycache__/
+web/node_modules/
+web/dist/
+data/.ipynb_checkpoints/
+data/anaconda_projects/
+data/image_mapping.ipynb
+data/image_url.csv
+.DS_Store
+*.pyc

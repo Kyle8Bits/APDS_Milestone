@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #1f302c;
+  --color-primary-light: #2a4a42;
+  --color-primary-lighter: #3a6358;
+  --color-primary-fade: #1f302c1a;
+
+  --color-bg: #ede2cc;
+  --color-bg-light: #f5efe3;
+  --color-bg-dark: #ddd0b4;
+
+  --color-secondary: #7b4d34;
+  --color-secondary-light: #9a6a4e;
+  --color-secondary-lighter: #b8886a;
+  --color-secondary-fade: #7b4d341a;
+
+  --color-accent: #c4873a;
+  --color-accent-light: #d4a05a;
+
+  --color-surface: #ffffff;
+  --color-surface-hover: #faf6f0;
+
+  --color-text: #2c2c2c;
+  --color-text-light: #6b6b6b;
+  --color-text-lighter: #999999;
+
+  --color-border: #d4c9b5;
+  --color-border-light: #e8dfd0;
+
+  --color-success: #3a7d5c;
+  --color-danger: #b44535;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark {
+    --color-primary: #e8dfd0;
+    --color-primary-light: #c4b89e;
+    --color-primary-lighter: #a89b82;
+    --color-primary-fade: #e8dfd01a;
+
+    --color-bg: #1a1a1a;
+    --color-bg-light: #242424;
+    --color-bg-dark: #111111;
+
+    --color-secondary: #c4873a;
+    --color-secondary-light: #d4a05a;
+    --color-secondary-lighter: #e0b87a;
+    --color-secondary-fade: #c4873a1a;
+
+    --color-accent: #d4a05a;
+    --color-accent-light: #e0b87a;
+
+    --color-surface: #2a2a2a;
+    --color-surface-hover: #333333;
+
+    --color-text: #e0d8ca;
+    --color-text-light: #a89b82;
+    --color-text-lighter: #7a7060;
+
+    --color-border: #444444;
+    --color-border-light: #383838;
+
+    --color-success: #5aad7e;
+    --color-danger: #d4695a;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  input, textarea, select {
+    font-family: inherit;
+    font-size: inherit;
+  }
+}
