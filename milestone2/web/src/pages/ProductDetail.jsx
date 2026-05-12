@@ -1,20 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import ProductCard, { brandGradient, renderStars, formatPrice } from '../components/ProductCard'
 
 function StarInput({ value, onChange }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button
+        <motion.button
           key={n}
           type="button"
+          whileHover={{ scale: 1.2 }}
+          whileTap={{ scale: 0.9 }}
           className={`bg-transparent border-none text-2xl p-0 leading-none transition ${n <= value ? 'text-accent' : 'text-border-light'}`}
           onClick={() => onChange(n)}
           aria-label={`Rate ${n} star${n > 1 ? 's' : ''}`}
         >
           {n <= value ? '★' : '☆'}
-        </button>
+        </motion.button>
       ))}
     </div>
   )
@@ -154,10 +157,29 @@ function ProductDetail() {
 
   return (
     <section className="max-w-[1200px] mx-auto px-6 py-8 pb-16">
-      {showToast && <div className="fixed top-20 right-6 bg-success text-white px-6 py-3 rounded-lg shadow-lg z-[1000] font-semibold text-sm animate-[slideIn_0.3s_ease]">Review added successfully!</div>}
+      {/* Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="fixed top-20 right-6 bg-success text-white px-6 py-3 rounded-lg shadow-lg z-[1000] font-semibold text-sm"
+          >
+            Review added successfully!
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Product Header */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-10 mb-12">
-        <div className="relative h-[220px] md:h-[360px] rounded-2xl overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="relative h-[220px] md:h-[360px] rounded-2xl overflow-hidden"
+        >
           {product.image && (
             <img
               src={product.image}
@@ -169,12 +191,24 @@ function ProductDetail() {
             className="absolute inset-0 opacity-20"
             style={{ background: brandGradient(product.brand_name) }}
           />
-        </div>
-        <div className="flex flex-col justify-center">
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15, duration: 0.5 }}
+          className="flex flex-col justify-center"
+        >
           <h1 className="text-[22px] md:text-[28px] font-bold text-primary leading-snug mb-2">{product.product_title}</h1>
           <p className="text-base text-text-light mb-4">{product.brand_name}</p>
           {product.price != null && (
-            <p className="text-[32px] font-bold text-secondary mb-4">${formatPrice(product.price)}</p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-[32px] font-bold text-secondary mb-4"
+            >
+              ${formatPrice(product.price)}
+            </motion.p>
           )}
           <div className="flex items-center gap-4">
             {detailStars && (
@@ -187,21 +221,34 @@ function ProductDetail() {
               <span className="text-sm text-text-light">{product.review_count} reviews</span>
             )}
           </div>
-        </div>
+        </motion.div>
       </section>
 
+      {/* Similar Products */}
       {similar.length > 0 && (
-        <section className="mb-12">
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mb-12"
+        >
           <h2 className="text-[22px] font-semibold text-primary mb-4">You May Also Like</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
             {similar.map((p) => (
               <ProductCard key={p.product_id} product={p} compact />
             ))}
           </div>
-        </section>
+        </motion.section>
       )}
 
-      <section className="mb-12" ref={reviewsSectionRef}>
+      {/* Reviews */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="mb-12"
+        ref={reviewsSectionRef}
+      >
         <h2 className="text-[22px] font-semibold text-primary mb-4">Customer Reviews ({reviews.length})</h2>
         {(() => {
           const totalPages = Math.max(1, Math.ceil(sortedReviews.length / REVIEWS_PER_PAGE))
@@ -223,8 +270,11 @@ function ProductDetail() {
                   const globalIdx = startIdx + idx
                   const isFirst = globalIdx === 0 && review._isNew
                   return (
-                    <article
+                    <motion.article
                       key={review.review_id || globalIdx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05, duration: 0.3 }}
                       className="bg-surface rounded-xl p-5 border-l-4 border-secondary shadow-sm"
                       ref={isFirst ? newReviewRef : undefined}
                     >
@@ -239,6 +289,15 @@ function ProductDetail() {
                         ) : (
                           <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-bg-light text-text-light">Not a Buyer</span>
                         )}
+                        {review.sentiment && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                            review.sentiment.label === 'positive' ? 'bg-success/10 text-success' :
+                            review.sentiment.label === 'negative' ? 'bg-danger/10 text-danger' :
+                            'bg-accent/10 text-accent'
+                          }`}>
+                            {review.sentiment.label === 'positive' ? 'Positive' : review.sentiment.label === 'negative' ? 'Negative' : 'Neutral'}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-text-light leading-relaxed mb-2">{review.review_text}</p>
                       <div className="flex items-center gap-4 text-xs text-text-lighter">
@@ -247,7 +306,7 @@ function ProductDetail() {
                           <span>{formatDate(review.review_date)}</span>
                         )}
                       </div>
-                    </article>
+                    </motion.article>
                   )
                 })}
                 {reviews.length === 0 && (
@@ -297,9 +356,15 @@ function ProductDetail() {
             </>
           )
         })()}
-      </section>
+      </motion.section>
 
-      <section className="mb-12">
+      {/* Write a Review */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+        className="mb-12"
+      >
         <h2 className="text-[22px] font-semibold text-primary mb-4">Write a Review</h2>
         <form className="flex flex-col gap-4 max-w-[600px]" onSubmit={handleSubmitReview}>
           <label className="flex flex-col gap-1.5">
@@ -336,72 +401,112 @@ function ProductDetail() {
               required
             />
           </label>
-          <button type="submit" className="self-start h-11 px-7 border-none rounded-lg bg-secondary text-white text-[15px] font-semibold hover:bg-secondary-light transition disabled:opacity-50 disabled:cursor-default" disabled={submitting}>
+          <motion.button
+            type="submit"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="self-start h-11 px-7 border-none rounded-lg bg-secondary text-white text-[15px] font-semibold hover:bg-secondary-light transition disabled:opacity-50 disabled:cursor-default"
+            disabled={submitting}
+          >
             {submitting ? 'Submitting...' : 'Submit Review'}
-          </button>
+          </motion.button>
         </form>
 
-        {prediction && (
-          <div className="mt-8 max-w-[600px] bg-surface rounded-xl p-6 shadow-md">
-            <div>
-              <h3 className="text-lg mb-4 text-primary font-semibold">AI Prediction</h3>
-              <div className="flex items-center gap-4 mb-3 max-md:flex-col max-md:items-start max-md:gap-2">
-                <div className="text-[42px] font-bold text-primary leading-none">
-                  {(prediction.probability * 100).toFixed(0)}%
-                </div>
-                <div className={`inline-block px-4 py-1.5 rounded-md text-base font-bold ${prediction.label === 'Likely Buyer' ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
-                  {prediction.label}
-                </div>
-              </div>
+        {/* Prediction Card */}
+        <AnimatePresence>
+          {prediction && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              className="mt-8 max-w-[600px] bg-surface rounded-xl p-6 shadow-md"
+            >
               <div>
-                <div className="flex-1 h-2.5 bg-bg-light rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-[width] duration-400 ${prediction.label === 'Likely Buyer' ? 'bg-success' : 'bg-danger'}`}
-                    style={{ width: `${(prediction.probability * 100).toFixed(0)}%` }}
-                  />
+                <h3 className="text-lg mb-4 text-primary font-semibold">AI Prediction</h3>
+                <div className="flex items-center gap-4 mb-3 max-md:flex-col max-md:items-start max-md:gap-2">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.2 }}
+                    className="text-[42px] font-bold text-primary leading-none"
+                  >
+                    {(prediction.probability * 100).toFixed(0)}%
+                  </motion.div>
+                  <div className={`inline-block px-4 py-1.5 rounded-md text-base font-bold ${prediction.label === 'Likely Buyer' ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
+                    {prediction.label}
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 mb-6 mt-6">
-              {Object.entries(prediction.models).map(([key, model]) => (
-                <div key={key} className="flex items-center gap-3 px-3.5 py-2.5 bg-bg-light rounded-lg">
-                  <span className="text-[13px] font-semibold text-text-light min-w-40 max-md:min-w-[100px]">{model.name}</span>
+                <div>
                   <div className="flex-1 h-2.5 bg-bg-light rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-[width] duration-400 ${model.probability >= 0.5 ? 'bg-success' : 'bg-danger'}`}
-                      style={{ width: `${(model.probability * 100).toFixed(0)}%` }}
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(prediction.probability * 100).toFixed(0)}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+                      className={`h-full rounded-full ${prediction.label === 'Likely Buyer' ? 'bg-success' : 'bg-danger'}`}
                     />
                   </div>
-                  <span className="text-[13px] font-semibold text-text whitespace-nowrap min-w-12 text-right">{(model.probability * 100).toFixed(1)}%</span>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="flex items-center gap-2.5 mb-4 flex-wrap max-md:flex-col max-md:items-start">
-              <span className="text-sm font-semibold text-text-light">Override label:</span>
-              <button
-                type="button"
-                className={`h-[34px] px-3.5 border-2 rounded-md text-[13px] font-semibold transition ${overrideLabel === 'Likely Buyer' ? 'border-success bg-success/20 text-success' : 'border-border bg-surface text-text-light hover:border-text-lighter'}`}
-                onClick={() => setOverrideLabel('Likely Buyer')}
-              >
-                Likely Buyer
-              </button>
-              <button
-                type="button"
-                className={`h-[34px] px-3.5 border-2 rounded-md text-[13px] font-semibold transition ${overrideLabel === 'Unlikely Buyer' ? 'border-danger bg-danger/20 text-danger' : 'border-border bg-surface text-text-light hover:border-text-lighter'}`}
-                onClick={() => setOverrideLabel('Unlikely Buyer')}
-              >
-                Unlikely Buyer
-              </button>
-            </div>
+              <div className="flex flex-col gap-3 mb-6 mt-6">
+                {Object.entries(prediction.models).map(([key, model], i) => (
+                  <motion.div
+                    key={key}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.1, duration: 0.3 }}
+                    className="flex items-center gap-3 px-3.5 py-2.5 bg-bg-light rounded-lg"
+                  >
+                    <span className="text-[13px] font-semibold text-text-light min-w-40 max-md:min-w-[100px]">{model.name}</span>
+                    <div className="flex-1 h-2.5 bg-bg-light rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(model.probability * 100).toFixed(0)}%` }}
+                        transition={{ duration: 0.6, delay: 0.5 + i * 0.1 }}
+                        className={`h-full rounded-full ${model.probability >= 0.5 ? 'bg-success' : 'bg-danger'}`}
+                      />
+                    </div>
+                    <span className="text-[13px] font-semibold text-text whitespace-nowrap min-w-12 text-right">{(model.probability * 100).toFixed(1)}%</span>
+                  </motion.div>
+                ))}
+              </div>
 
-            <button type="button" className="h-[42px] px-8 border-none rounded-lg bg-primary text-white text-[15px] font-semibold hover:bg-primary-light transition" onClick={handleConfirm}>
-              Confirm
-            </button>
-          </div>
-        )}
-      </section>
+              <div className="flex items-center gap-2.5 mb-4 flex-wrap max-md:flex-col max-md:items-start">
+                <span className="text-sm font-semibold text-text-light">Override label:</span>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`h-[34px] px-3.5 border-2 rounded-md text-[13px] font-semibold transition ${overrideLabel === 'Likely Buyer' ? 'border-success bg-success/20 text-success' : 'border-border bg-surface text-text-light hover:border-text-lighter'}`}
+                  onClick={() => setOverrideLabel('Likely Buyer')}
+                >
+                  Likely Buyer
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`h-[34px] px-3.5 border-2 rounded-md text-[13px] font-semibold transition ${overrideLabel === 'Unlikely Buyer' ? 'border-danger bg-danger/20 text-danger' : 'border-border bg-surface text-text-light hover:border-text-lighter'}`}
+                  onClick={() => setOverrideLabel('Unlikely Buyer')}
+                >
+                  Unlikely Buyer
+                </motion.button>
+              </div>
+
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="h-[42px] px-8 border-none rounded-lg bg-primary text-white text-[15px] font-semibold hover:bg-primary-light transition"
+                onClick={handleConfirm}
+              >
+                Confirm
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.section>
     </section>
   )
 }

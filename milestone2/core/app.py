@@ -8,7 +8,7 @@ import util
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
+app = Flask(__name__, static_folder=None)
 CORS(app)
 
 
@@ -107,6 +107,12 @@ def create_review():
 @app.route("/api/stats", methods=["GET"])
 def stats():
     return jsonify(data.get_stats())
+
+
+@app.route("/api/top-rated", methods=["GET"])
+def top_rated():
+    n = request.args.get("n", 10, type=int)
+    return jsonify(data.get_top_rated(n))
 
 
 @app.route("/", defaults={"path": ""})

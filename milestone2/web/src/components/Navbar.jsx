@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
 function Navbar() {
   const [query, setQuery] = useState('')
@@ -20,10 +21,15 @@ function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 w-full h-[60px] bg-primary dark:bg-[#1a1a1a] z-50 shadow">
-      <div className="max-w-[1200px] mx-auto h-full flex items-center px-6 gap-6">
+    <motion.nav
+      initial={{ y: -60 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="fixed top-0 w-full h-[60px] bg-primary dark:bg-[#1a1a1a] z-50 shadow"
+    >
+      <div className="max-w-[1200px] mx-auto h-full flex items-center px-6 gap-5">
         <Link to="/" className="text-[22px] font-bold text-white hover:text-secondary transition-colors">GlowCart</Link>
-        <form className="flex-1 max-w-[480px] flex" onSubmit={handleSubmit}>
+        <form className="flex-1 max-w-[420px] flex" onSubmit={handleSubmit}>
           <input
             type="text"
             placeholder="Search products..."
@@ -33,18 +39,19 @@ function Navbar() {
           />
           <button type="submit" className="h-[38px] px-[18px] border-none rounded-r-lg bg-secondary text-white text-sm font-semibold hover:bg-secondary-light transition-colors cursor-pointer">Search</button>
         </form>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-1">
+          <Link to="/products" className="text-sm font-semibold text-white/85 px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-secondary/20 transition-colors">Products</Link>
           <Link to="/dashboard" className="text-sm font-semibold text-white/85 px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-secondary/20 transition-colors">Dashboard</Link>
           <button
             onClick={() => setDark(!dark)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white text-lg transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white text-lg transition-colors ml-1"
             aria-label="Toggle dark mode"
           >
             {dark ? '☀️' : '🌙'}
           </button>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   )
 }
 

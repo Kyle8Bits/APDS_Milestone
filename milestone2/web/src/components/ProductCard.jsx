@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
 function hashString(str) {
   let hash = 0
@@ -45,42 +46,47 @@ function ProductCard({ product, compact }) {
   const stars = avg_product_rating != null ? renderStars(avg_product_rating) : null
 
   return (
-    <Link
-      to={`/products/${product_id}`}
-      className={`block bg-surface rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg${compact ? ' min-w-[200px] max-w-[200px] shrink-0' : ''}`}
+    <motion.div
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
-      <div className={`relative rounded-t-xl ${compact ? 'h-[130px]' : 'h-[200px]'}`}>
-        {image && (
-          <img
-            src={image}
-            alt={product_title}
-            className="absolute inset-0 h-full w-full object-cover"
+      <Link
+        to={`/products/${product_id}`}
+        className={`block bg-surface rounded-xl shadow-sm overflow-hidden transition-shadow duration-200 hover:shadow-lg${compact ? ' min-w-[200px] max-w-[200px] shrink-0' : ''}`}
+      >
+        <div className={`relative rounded-t-xl ${compact ? 'h-[130px]' : 'h-[200px]'}`}>
+          {image && (
+            <img
+              src={image}
+              alt={product_title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{ background: brandGradient(brand_name) }}
           />
-        )}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{ background: brandGradient(brand_name) }}
-        />
-      </div>
-      <div className={compact ? 'p-2.5' : 'p-4'}>
-        <h3 className={`font-semibold text-primary mb-1.5 leading-snug ${compact ? 'text-[13px] min-h-0' : 'text-[15px] min-h-[40px]'}`}>{displayTitle}</h3>
-        <p className="text-[13px] text-text-light mb-2.5">{brand_name}</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          {price != null && (
-            <span className="text-[17px] font-bold text-primary">${formatPrice(price)}</span>
-          )}
-          {stars && (
-            <span className="text-sm text-text flex items-center gap-0.5">
-              <span className="text-accent tracking-wide">{stars.filled}<span className="text-border-light">{stars.empty}</span></span>
-              <span className="text-text-light text-[0.85rem] ml-1">{Number(avg_product_rating).toFixed(1)}</span>
-            </span>
-          )}
-          {review_count != null && (
-            <span className="text-xs text-text-light">{review_count} reviews</span>
-          )}
         </div>
-      </div>
-    </Link>
+        <div className={compact ? 'p-2.5' : 'p-4'}>
+          <h3 className={`font-semibold text-primary mb-1.5 leading-snug ${compact ? 'text-[13px] min-h-0' : 'text-[15px] min-h-[40px]'}`}>{displayTitle}</h3>
+          <p className="text-[13px] text-text-light mb-2.5">{brand_name}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {price != null && (
+              <span className="text-[17px] font-bold text-primary">${formatPrice(price)}</span>
+            )}
+            {stars && (
+              <span className="text-sm text-text flex items-center gap-0.5">
+                <span className="text-accent tracking-wide">{stars.filled}<span className="text-border-light">{stars.empty}</span></span>
+                <span className="text-text-light text-[0.85rem] ml-1">{Number(avg_product_rating).toFixed(1)}</span>
+              </span>
+            )}
+            {review_count != null && (
+              <span className="text-xs text-text-light">{review_count} reviews</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   )
 }
 

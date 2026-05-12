@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 
 function Search() {
@@ -45,29 +46,49 @@ function Search() {
 
       {!loading && !error && results.length > 0 && (
         <>
-          <h2 className="text-[22px] text-primary mb-2">
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-[22px] text-primary mb-2"
+          >
             {results.length} products matched for &ldquo;{query}&rdquo;
-          </h2>
+          </motion.h2>
           <section className="max-w-[1200px] mx-auto px-6 py-8 grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
-            {results.map((product) => (
-              <ProductCard key={product.product_id} product={product} />
+            {results.map((product, i) => (
+              <motion.div
+                key={product.product_id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.04, 0.5), duration: 0.4 }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
             ))}
           </section>
         </>
       )}
 
       {!loading && !error && results.length === 0 && query && (
-        <div className="text-center py-12 px-6 text-text-light">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12 px-6 text-text-light"
+        >
           <h3 className="text-xl mb-2 text-text">No products found for &ldquo;{query}&rdquo;</h3>
           <p className="text-[0.95rem] text-text-light">Try a different keyword or check the spelling.</p>
-        </div>
+        </motion.div>
       )}
 
       {!query && (
-        <div className="text-center py-12 px-6 text-text-light">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12 px-6 text-text-light"
+        >
           <h3 className="text-xl mb-2 text-text">Search for beauty products</h3>
           <p className="text-[0.95rem] text-text-light">Enter a keyword above to find cosmetics and beauty products.</p>
-        </div>
+        </motion.div>
       )}
     </section>
   )

@@ -5,6 +5,9 @@ from pathlib import Path
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+_sentiment_analyzer = SentimentIntensityAnalyzer()
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -42,21 +45,40 @@ _products_by_id = {p["product_id"]: p for p in PRODUCTS}
 print(f"Built product table: {len(PRODUCTS)} products, "
       f"{_df['brand_name'].nunique()} brands")
 
+def _analyze_sentiment(text):
+    if not text or not isinstance(text, str) or not text.strip():
+        return {"compound": 0.0, "label": "neutral"}
+    scores = _sentiment_analyzer.polarity_scores(text)
+    compound = scores["compound"]
+    if compound >= 0.05:
+        label = "positive"
+    elif compound <= -0.05:
+        label = "negative"
+    else:
+        label = "neutral"
+    return {"compound": round(compound, 4), "label": label}
+
+
 _reviews_by_product = {}
 for pid, grp in _df.groupby("product_id"):
     reviews = []
     for _, r in grp.iterrows():
+        text = str(r["review_text"]) if pd.notna(r["review_text"]) else ""
+        sentiment = _analyze_sentiment(text)
         reviews.append({
             "review_id": int(r["review_id"]),
             "product_id": int(r["product_id"]),
             "review_title": str(r["review_title"]) if pd.notna(r["review_title"]) else "",
-            "review_text": str(r["review_text"]) if pd.notna(r["review_text"]) else "",
+            "review_text": text,
             "author": str(r["author"]) if pd.notna(r["author"]) else "Unknown",
             "review_date": str(r["review_date"]) if pd.notna(r["review_date"]) else "",
             "review_rating": float(r["review_rating"]) if pd.notna(r["review_rating"]) else 0.0,
             "is_a_buyer": bool(r["is_a_buyer"]) if not isinstance(r["is_a_buyer"], str) else r["is_a_buyer"].lower() == "true",
+            "sentiment": sentiment,
         })
     _reviews_by_product[int(pid)] = reviews
+
+print("Sentiment analysis complete for all reviews")
 
 _user_reviews = []
 _next_review_id = int(_df["review_id"].max()) + 1
@@ -194,35 +216,84 @@ def get_review(review_id):
     return None
 
 
-def get_stats():
-    """Compute dashboard statistics from in-memory data."""
-    total_products = len(PRODUCTS)
-    total_brands = len({p["brand_name"] for p in PRODUCTS})
+def get_top_rated(n=10):
+    rated = [p for p in PRODUCTS if p.get("avg_product_rating", 0) >= 4.0]
+    rated.sort(key=lambda p: (-p.get("avg_product_rating", 0), -p.get("review_count", 0)))
+    return rated[:n]
 
-    # Flatten all reviews
+
+def _collect_all_reviews():
     all_reviews = []
     for reviews in _reviews_by_product.values():
         all_reviews.extend(reviews)
-    # Include user-submitted reviews
     all_reviews.extend(_user_reviews)
+    return all_reviews
 
+
+def get_sentiment_stats():
+    all_reviews = _collect_all_reviews()
+    positive = sum(1 for r in all_reviews if r.get("sentiment", {}).get("label") == "positive")
+    negative = sum(1 for r in all_reviews if r.get("sentiment", {}).get("label") == "negative")
+    neutral = sum(1 for r in all_reviews if r.get("sentiment", {}).get("label") == "neutral")
+    total = len(all_reviews)
+    avg_compound = sum(r.get("sentiment", {}).get("compound", 0) for r in all_reviews) / total if total else 0
+
+    brand_sentiment = {}
+    for r in all_reviews:
+        product = _products_by_id.get(r["product_id"])
+        if not product:
+            continue
+        brand = product["brand_name"]
+        if brand not in brand_sentiment:
+            brand_sentiment[brand] = {"total_compound": 0.0, "count": 0,
+                                      "positive": 0, "negative": 0, "neutral": 0}
+        s = r.get("sentiment", {})
+        brand_sentiment[brand]["total_compound"] += s.get("compound", 0)
+        brand_sentiment[brand]["count"] += 1
+        label = s.get("label", "neutral")
+        brand_sentiment[brand][label] += 1
+
+    brands = []
+    for brand, info in brand_sentiment.items():
+        c = info["count"]
+        brands.append({
+            "brand": brand,
+            "avg_sentiment": round(info["total_compound"] / c, 4) if c else 0,
+            "positive": info["positive"],
+            "negative": info["negative"],
+            "neutral": info["neutral"],
+            "total": c,
+        })
+    brands.sort(key=lambda x: x["avg_sentiment"], reverse=True)
+
+    return {
+        "total": total,
+        "positive": positive,
+        "negative": negative,
+        "neutral": neutral,
+        "avg_compound": round(avg_compound, 4),
+        "by_brand": brands,
+    }
+
+
+def get_stats():
+    total_products = len(PRODUCTS)
+    total_brands = len({p["brand_name"] for p in PRODUCTS})
+
+    all_reviews = _collect_all_reviews()
     total_reviews = len(all_reviews)
 
-    # Buyer vs non-buyer
     buyers = sum(1 for r in all_reviews if r["is_a_buyer"])
     non_buyers = total_reviews - buyers
 
-    # Rating distribution
     rating_distribution = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
     for r in all_reviews:
         star = str(int(round(r["review_rating"])))
         if star in rating_distribution:
             rating_distribution[star] += 1
 
-    # Reviews by brand
     brand_data = {}
     for r in all_reviews:
-        # Find brand for this review's product
         product = _products_by_id.get(r["product_id"])
         if product is None:
             continue
@@ -245,7 +316,6 @@ def get_stats():
         })
     reviews_by_brand.sort(key=lambda x: x["reviews"], reverse=True)
 
-    # Top 5 products by review count
     product_review_counts = {}
     for r in all_reviews:
         pid = r["product_id"]
@@ -272,6 +342,8 @@ def get_stats():
             "avg_rating": round(info["total_rating"] / count, 2) if count else 0.0,
         })
 
+    sentiment = get_sentiment_stats()
+
     return {
         "total_products": total_products,
         "total_reviews": total_reviews,
@@ -280,6 +352,7 @@ def get_stats():
         "rating_distribution": rating_distribution,
         "reviews_by_brand": reviews_by_brand,
         "top_products": top_products,
+        "sentiment": sentiment,
     }
 
 
@@ -289,6 +362,7 @@ def add_review(product_id, review_title, review_text, review_rating,
     global _next_review_id
     if product_id not in _products_by_id:
         return None
+    sentiment = _analyze_sentiment(review_text)
     review = {
         "review_id": _next_review_id,
         "product_id": product_id,
@@ -298,6 +372,7 @@ def add_review(product_id, review_title, review_text, review_rating,
         "review_date": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M"),
         "review_rating": float(review_rating),
         "is_a_buyer": bool(is_a_buyer),
+        "sentiment": sentiment,
     }
     _next_review_id += 1
     _user_reviews.append(review)

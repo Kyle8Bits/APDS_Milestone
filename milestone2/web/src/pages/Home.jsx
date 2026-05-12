@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import Slider from 'rc-slider'
 import 'rc-slider/assets/index.css'
 import ProductCard from '../components/ProductCard'
@@ -6,14 +8,22 @@ import ProductCard from '../components/ProductCard'
 const PRICE_MIN = 0
 const PRICE_MAX = 3000
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } }
+}
+
 function Home() {
+  const [searchParams] = useSearchParams()
+  const initialBrand = searchParams.get('brand') || ''
+
   const [products, setProducts] = useState([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [brands, setBrands] = useState([])
-  const [selectedBrand, setSelectedBrand] = useState('')
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand)
   const [sortBy, setSortBy] = useState('name')
   const [priceRange, setPriceRange] = useState([PRICE_MIN, PRICE_MAX])
   const [committedPrice, setCommittedPrice] = useState([PRICE_MIN, PRICE_MAX])
@@ -98,14 +108,36 @@ function Home() {
 
   return (
     <section>
-      <section className="text-center py-16 px-6 pt-16 pb-12 bg-gradient-to-br from-primary to-primary-light text-white">
-        <h1 className="text-[42px] max-md:text-[28px] font-bold text-white mb-3 tracking-tight">Discover Beauty Products</h1>
-        <p className="text-lg text-white/75 max-w-[520px] mx-auto">
-          Browse thousands of cosmetics, read real reviews, and find your perfect match.
-        </p>
-      </section>
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="text-center py-16 px-6 pt-16 pb-12 bg-gradient-to-br from-primary to-primary-light text-white"
+      >
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="text-[42px] max-md:text-[28px] font-bold text-white mb-3 tracking-tight"
+        >
+          {selectedBrand || 'All Products'}
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="text-lg text-white/75 max-w-[520px] mx-auto"
+        >
+          Browse, filter, and find your perfect beauty match.
+        </motion.p>
+      </motion.section>
 
-      <div className="max-w-[1200px] mx-auto px-6 pt-6">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        className="max-w-[1200px] mx-auto px-6 pt-6"
+      >
         <div className="flex gap-3 items-center flex-wrap max-md:flex-col max-md:items-stretch">
           <select className="px-3 py-2 border border-border rounded-lg bg-surface text-text text-[0.9rem] outline-none focus:border-secondary" value={selectedBrand} onChange={handleBrandChange}>
             <option value="">All Brands</option>
@@ -155,12 +187,17 @@ function Home() {
             <option value="2">2+ Stars</option>
           </select>
           {hasFilters && (
-            <button className="px-3.5 py-2 border border-secondary rounded-lg bg-transparent text-secondary text-[0.85rem] font-medium whitespace-nowrap hover:bg-secondary hover:text-white transition" onClick={handleClearFilters}>
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="px-3.5 py-2 border border-secondary rounded-lg bg-transparent text-secondary text-[0.85rem] font-medium whitespace-nowrap hover:bg-secondary hover:text-white transition"
+              onClick={handleClearFilters}
+            >
               Clear Filters
-            </button>
+            </motion.button>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {loading && <div className="text-center py-16 px-6 text-text-light text-lg">Loading products...</div>}
       {error && <div className="text-center py-16 px-6 text-danger text-lg">{error}</div>}
@@ -168,8 +205,15 @@ function Home() {
       {!loading && !error && (
         <>
           <section className="max-w-[1200px] mx-auto px-6 py-8 grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 max-md:grid-cols-1 max-md:px-4 max-md:py-5">
-            {products.map((product) => (
-              <ProductCard key={product.product_id} product={product} />
+            {products.map((product, i) => (
+              <motion.div
+                key={product.product_id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.03, 0.4), duration: 0.4 }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
             ))}
           </section>
 

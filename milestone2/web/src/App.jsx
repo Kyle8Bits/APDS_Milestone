@@ -1,8 +1,10 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import './App.css'
 
+const Landing = lazy(() => import('./pages/Landing'))
 const Home = lazy(() => import('./pages/Home'))
 const Search = lazy(() => import('./pages/Search'))
 const ProductDetail = lazy(() => import('./pages/ProductDetail'))
@@ -17,19 +19,38 @@ function PageLoader() {
   )
 }
 
-function App() {
+const pageTransition = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.2, ease: 'easeIn' } },
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
+
   return (
-    <BrowserRouter>
-      <Navbar />
-      <main className="pt-[60px] min-h-screen bg-bg">
+    <AnimatePresence mode="wait">
+      <motion.div key={location.pathname} {...pageTransition}>
         <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
+          <Routes location={location}>
+            <Route path="/" element={<Landing />} />
+            <Route path="/products" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </Suspense>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Navbar />
+      <main className="pt-[60px] min-h-screen bg-bg">
+        <AnimatedRoutes />
       </main>
     </BrowserRouter>
   )

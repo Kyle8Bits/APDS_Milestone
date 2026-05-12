@@ -15,11 +15,14 @@ TEAM MEMBERS
 1. PROJECT OVERVIEW
 ================================================================================
 
-GlowCart is a cosmetics/beauty product review website that lets shoppers browse
-products, read reviews, and submit new reviews. When a review is submitted, the
-system uses a machine-learning ensemble (trained in Milestone I) to predict
-whether the reviewer is likely to purchase the product. The prediction is shown
-to the reviewer, who can accept or override it before confirming.
+GlowCart is a cosmetics/beauty product review website built for this assignment.
+Users can browse products, search by brand or keyword, read reviews, and write
+their own. When someone submits a review, the app runs it through a 3-model
+ML ensemble (from Milestone I) to predict if the reviewer would buy the product.
+The user sees this prediction and can accept or change it before confirming.
+
+We also added a sentiment analysis feature (VADER) as our Task 4, which scores
+every review as positive/neutral/negative and shows the results on the dashboard.
 
 
 ================================================================================
@@ -36,57 +39,53 @@ to the reviewer, who can accept or override it before confirming.
     - Final vocabulary: 8,054 unique terms
 
 2.2  Feature Representations (Task 2)
-    Three document representations were generated from the cleaned review text:
+    We built three different document representations from the cleaned text:
 
     (a) Bag-of-Words (BoW): Sparse count vectors over the 8,054-word vocabulary.
     (b) Unweighted FastText Embeddings: Sum of 300-dim vectors from the
         pretrained fasttext-wiki-news-subwords-300 model for each token.
-    (c) TF-IDF Weighted FastText Embeddings: Same FastText vectors but weighted
-        by each token's TF-IDF score (computed via gensim TfidfModel).
+    (c) TF-IDF Weighted FastText Embeddings: Same FastText vectors but each
+        token's vector is scaled by its TF-IDF score (gensim TfidfModel).
 
 2.3  Classification Experiments (Task 3)
 
     Q1 - Language Model Comparison (review text only):
-      Evaluated 3 classifiers (LogisticRegression, LinearSVC, RandomForest)
-      across all 3 representations using 5-fold stratified cross-validation.
+      We tested 3 classifiers (LogisticRegression, LinearSVC, RandomForest)
+      on all 3 representations using 5-fold stratified cross-validation.
       Best result: BoW + LinearSVC, macro-F1 = 0.5745
 
     Q2(b) - Adding Review Title:
       Concatenated cleaned review_title tokens with review_text tokens and
-      rebuilt all representations. Marginal improvement (~+0.01 F1).
+      rebuilt all representations. Only gave a small bump (~+0.01 F1).
 
     Q2(c) - Adding Structural Features:
-      Added product metadata alongside text features:
+      We added product metadata on top of the text features:
         - Numeric: price, avg_product_rating, product_rating_count
         - Categorical: brand_name, product_title
       Best result: BoW + structural features, macro-F1 = 0.7126
 
-    The Q2(c) configuration was selected for deployment because it achieved the
-    highest macro-F1 and more than doubled non-buyer recall (0.196 -> 0.471).
+    We went with the Q2(c) setup for the web app since it gave the best F1
+    and more than doubled non-buyer recall (0.196 -> 0.471).
 
-2.4  Why product_title Is Included as a Feature
+2.4  Why We Included product_title as a Feature
 
-    In real-world e-commerce, a customer's purchasing decision is not based on
-    the review text alone. The specific product matters: the same positive review
-    written about a $5 drugstore mascara and a $60 prestige serum will produce
-    different buying outcomes because customers weigh price, brand reputation,
-    and product category when deciding to purchase.
+    We noticed that just looking at the review text wasn't enough. Whether
+    someone actually buys a product depends a lot on what the product is -
+    a glowing review on a cheap drugstore mascara converts differently than
+    the same review on an expensive prestige serum. People weigh price, brand
+    reputation, and product type when they decide to purchase, not just what
+    the review says.
 
-    Including product_title lets the model learn product-level buying patterns.
-    For example, some products have high satisfaction but low conversion (luxury
-    items where customers browse but rarely buy), while others convert at high
-    rates regardless of review sentiment (essentials, repurchases). One-hot
-    encoding with min_frequency=20 collapses rare products into an "infrequent"
-    bucket, keeping dimensionality manageable while preserving signal for
-    popular products with enough data to learn from.
+    By one-hot encoding product_title (with min_frequency=20 to keep things
+    manageable), the model can pick up on product-level patterns. Some products
+    get great reviews but low conversion (luxury items people window-shop),
+    while others sell well no matter what (everyday essentials, repurchases).
 
-    Empirically, adding product_title (along with brand_name, price, and
-    ratings) boosted macro-F1 from 0.5745 to 0.7126 — a +0.14 improvement.
-    This confirms that the model benefits from knowing which product is being
-    reviewed, not just what the reviewer wrote.
+    Adding product_title along with brand_name, price, and ratings pushed
+    macro-F1 from 0.5745 to 0.7126 (+0.14), so it clearly helps.
 
-    Note: review_rating was deliberately excluded to avoid label leakage, since
-    rating is strongly correlated with the is_a_buyer target variable.
+    We left out review_rating on purpose to avoid label leakage - rating is
+    too correlated with is_a_buyer.
 
 
 ================================================================================
@@ -94,8 +93,10 @@ to the reviewer, who can accept or override it before confirming.
 ================================================================================
 
 3.1  Tech Stack
-    Backend:  Python 3.13, Flask, scikit-learn, gensim, pandas, numpy
-    Frontend: React 19, React Router 7, Vite, Tailwind CSS 4
+    Backend:  Python 3.13, Flask, scikit-learn, gensim, pandas, numpy,
+              vaderSentiment (for sentiment analysis)
+    Frontend: React 19, React Router 7, Vite, Tailwind CSS 4,
+              Framer Motion (animations)
     Deploy:   Docker (multi-stage), Gunicorn
 
 3.2  Project Structure
@@ -103,11 +104,11 @@ to the reviewer, who can accept or override it before confirming.
     milestone2/
     ├── core/                   # Flask backend
     │   ├── app.py              # API routes + static file serving
-    │   ├── data.py             # Data loading, search, similarity
+    │   ├── data.py             # Data loading, search, similarity, sentiment
     │   └── util.py             # ML prediction pipeline
     ├── web/                    # React frontend
     │   └── src/
-    │       ├── pages/          # Home, Search, ProductDetail, Dashboard
+    │       ├── pages/          # Landing, Home, Search, ProductDetail, Dashboard
     │       └── components/     # ProductCard, Navbar
     ├── model/                  # Trained ML artifacts (~10 MB)
     │   ├── clf_bow.joblib      # BoW LogisticRegression classifier
@@ -126,62 +127,74 @@ to the reviewer, who can accept or override it before confirming.
 
 3.3  Application Flow
 
-    BROWSING:
-      User opens the home page -> Flask serves the React SPA -> React calls
-      GET /api/products with filters/pagination -> Products displayed as cards
-      -> User clicks a card -> GET /api/products/<id> loads full product detail
-      with all reviews.
+    LANDING PAGE (/):
+      The home page is a landing page that shows the site branding, stats
+      (total products/reviews/brands), a carousel of top-rated products,
+      a "Shop by Brand" section, and feature highlights. Clicking "Shop Now"
+      or a brand takes users to the product browse page.
+
+    BROWSING (/products):
+      The product page shows a paginated grid of all products. Users can
+      filter by brand, price range, and minimum rating, and sort by name,
+      rating, price, or review count. Clicking a product card opens the
+      detail page.
 
     SEARCH (Task 1):
-      User types a keyword in the navbar search bar -> GET /api/search?q=...
-      -> Backend performs two-pass matching:
-        Pass 1: Exact substring match on brand_name + product_title (score 1.0)
-        Pass 2: Fuzzy matching via SequenceMatcher (threshold 0.6) for typo
-                tolerance (e.g. "Maybeline" matches "Maybelline")
-      -> Results ranked by match score and displayed with result count.
+      There's a search bar in the navbar. When users type a keyword, it hits
+      GET /api/search?q=... and the backend does two-pass matching:
+        Pass 1: exact substring check on brand_name + product_title (score 1.0)
+        Pass 2: fuzzy match via SequenceMatcher (threshold 0.6) so typos
+                like "Maybeline" still find "Maybelline"
+      Results are ranked by score and shown with a count.
 
     REVIEW CREATION + PREDICTION (Task 2):
-      User fills in review form (title, text, rating, author) on a product
-      page -> POST /api/reviews -> Backend runs the prediction pipeline:
+      On a product page, users fill in a review form (title, text, rating,
+      author name) and submit it. The backend then:
 
-        1. Clean review_text + review_title (tokenise, lowercase, remove
-           stopwords, remove short tokens)
-        2. Look up product metadata (brand, title, price, rating, review count)
-        3. Run 3 models in parallel:
-           - BoW classifier: count vector + structural features
-           - Unweighted embedding: FastText sum + structural features
-           - Weighted embedding: TF-IDF weighted FastText + structural features
-        4. Average the 3 probabilities -> fused prediction
-        5. Apply threshold (0.3): >= threshold = "Likely Buyer"
+        1. Cleans the review text + title (tokenise, lowercase, remove
+           stopwords and short tokens)
+        2. Looks up the product metadata (brand, title, price, etc.)
+        3. Runs 3 models:
+           - BoW: count vector + structural features
+           - Unweighted: FastText vector sum + structural features
+           - Weighted: TF-IDF weighted FastText + structural features
+        4. Averages the 3 probabilities for a fused prediction
+        5. Applies threshold (0.3): above = "Likely Buyer"
 
-      -> Frontend shows the prediction panel with fused probability, individual
-         model confidence bars, and the predicted label.
-      -> User can override the label if they disagree.
-      -> On confirm, the review is saved and immediately visible on the product
-         page.
+      The frontend shows the prediction with confidence bars for each model.
+      Users can override the label if they disagree, then confirm. The review
+      then shows up on the product page right away.
 
     SIMILAR ITEMS (Task 3):
-      On every product detail page, GET /api/products/<id>/similar returns
-      the top 6 most similar products. Similarity is precomputed at startup:
-        - Aggregate all review_text per product into a single document
-        - Fit sklearn TfidfVectorizer on all product documents
-        - Compute pairwise cosine similarity matrix
-      -> "You May Also Like" section displays similar product cards.
+      Every product page has a "You May Also Like" section with the 6 most
+      similar products. We precompute this at startup by:
+        - Joining all reviews per product into one document
+        - Running TfidfVectorizer on all product documents
+        - Computing pairwise cosine similarity
 
-    DASHBOARD (Task 4 - Additional Functionality):
-      GET /api/stats returns aggregate analytics:
-        - Total products, reviews, brands, buyer rate
-        - Rating distribution (1-5 stars)
-        - Reviews by brand with buyer % and average rating
-        - Top 5 most-reviewed products
-      Displayed as summary cards, bar charts, and data tables.
+    SENTIMENT ANALYSIS DASHBOARD (Task 4 - Additional Functionality):
+      We added VADER sentiment analysis as our extra feature. At startup, every
+      review gets scored with VADER's compound score and labelled as positive
+      (>= 0.05), negative (<= -0.05), or neutral.
 
-    ADDITIONAL FEATURES:
+      The dashboard (GET /api/stats) shows:
+        - A sentiment gauge with the overall average score
+        - Distribution breakdown (positive/neutral/negative counts + bar)
+        - Sentiment per brand with avg scores and mini bar charts
+        - Top-rated products carousel
+        - Rating distribution, brand breakdown, top reviewed products
+
+      Each review on product pages also shows a sentiment badge next to the
+      buyer status badge.
+
+    OTHER FEATURES:
+      - Landing page with hero section, brand grid, and feature cards
+      - Animated page transitions and UI interactions (Framer Motion)
       - Product filtering by brand, price range, minimum rating
       - Sorting by name, rating, price, review count
       - Pagination (20 products/page, 5 reviews/page)
-      - Dark mode (persisted in localStorage)
-      - Responsive layout (mobile/tablet/desktop)
+      - Dark mode toggle (saved in localStorage)
+      - Responsive layout for mobile/tablet/desktop
       - Product images with brand-coloured gradient overlay
 
 
@@ -219,16 +232,15 @@ Open http://localhost:5173 in your browser.
 The Dockerfile uses a two-stage build:
 
   Stage 1 (node:22-alpine):
-    - Installs npm dependencies (npm ci for reproducible builds)
+    - Installs npm dependencies (npm ci)
     - Builds the React frontend (npm run build -> dist/)
 
   Stage 2 (python:3.13-slim):
-    - Installs system build tools (gcc, g++) for native Python packages
-    - Installs Python dependencies from requirements.txt + gunicorn
-    - Copies Flask source code, model artifacts, and data CSV
-    - Copies the built frontend from Stage 1 into core/static/
-    - Flask serves both the API (/api/*) and the SPA (all other routes)
-    - Gunicorn runs with 2 workers and 120s timeout on port 8000
+    - Installs gcc/g++ for native Python packages
+    - Installs Python deps from requirements.txt + gunicorn
+    - Copies Flask code, model files, and data CSV
+    - Copies built frontend from Stage 1 into core/static/
+    - Gunicorn runs with 2 workers on port 8000
 
 Build and run:
   cd milestone2
@@ -237,10 +249,9 @@ Build and run:
 
 Open http://localhost:8000 in your browser.
 
-To deploy on Railway or similar platforms:
+For Railway or similar platforms:
   - Set root directory to milestone2/
-  - The PORT environment variable is respected automatically
-  - No additional configuration needed
+  - PORT env var is picked up automatically
 
 
 ================================================================================
@@ -250,13 +261,14 @@ To deploy on Railway or similar platforms:
   GET  /api/brands                     List all brand names
   GET  /api/products                   Paginated product listing
        ?page=1&per_page=20&sort_by=name&brand=...&min_price=...&max_price=...&min_rating=...
-  GET  /api/products/<id>              Single product with reviews
+  GET  /api/products/<id>              Single product with reviews + sentiment
   GET  /api/products/<id>/similar      Top-6 similar products
   GET  /api/search?q=<query>           Search products by keyword
   GET  /api/reviews/<id>               Single review by ID
   POST /api/reviews                    Create review + get ML prediction
        Body: {product_id, review_title, review_text, review_rating, author}
-  GET  /api/stats                      Dashboard statistics
+  GET  /api/stats                      Dashboard stats + sentiment breakdown
+  GET  /api/top-rated?n=10             Top N highest-rated products
 
 
 ================================================================================
@@ -265,10 +277,10 @@ To deploy on Railway or similar platforms:
 
 Backend (Python):
   flask, flask-cors, numpy, scikit-learn==1.7.2, pandas, scipy,
-  gensim, joblib, gunicorn
+  gensim, joblib, gunicorn, vaderSentiment
 
 Frontend (Node):
-  react, react-dom, react-router-dom, rc-slider,
+  react, react-dom, react-router-dom, rc-slider, framer-motion,
   tailwindcss, vite, eslint
 
 
@@ -276,8 +288,8 @@ Frontend (Node):
 8. NOTES
 ================================================================================
 
-  - User-submitted reviews are stored in memory and will be lost on server
-    restart. This is by design for a demo/assignment application.
-  - Model files total ~10 MB and are included in the model/ directory.
+  - User-submitted reviews are stored in memory and reset on server restart.
+    This is fine for a demo app.
+  - Model files total ~10 MB and are in the model/ directory.
   - The dataset (processed_with_images.csv, ~23 MB) is in data/.
-  - All files needed to run the application are included in this submission.
+  - All files needed to run the app are included in this submission.
