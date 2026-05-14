@@ -58,8 +58,10 @@ We added product metadata on top of the text features:
 - **Categorical:** `brand_name`, `product_title`
 - Best result: **BoW + structural features**, macro-F1 = **0.7126**
 
-We went with Q2(c) for the web app since it had the best F1 and more than
-doubled non-buyer recall (0.196 → 0.471).
+For the web app we export **3 models that use different data types**: Models 1
+and 2 are text-only (review_text + review_title), while Model 3 adds the
+structural metadata. This satisfies the "different data types" requirement
+and lets the ensemble combine a pure-text signal with a text+structured signal.
 
 ### 2.4 Why We Included `product_title` as a Feature
 
@@ -83,23 +85,25 @@ Adding it alongside `brand_name`, `price`, and ratings pushed macro-F1 from
 
 ### 2.5 How the 3 Models Compare
 
-Not all three models perform equally, and that's actually fine:
+The three models deliberately use **different data types**:
 
-- **Model 1 (BoW)** is the strongest on its own. Word counts work well here
-  because beauty reviews use very predictable vocabulary — words like "love",
-  "repurchase", "broke out" are common and carry strong signal.
-- **Model 2 (Unweighted FastText)** performs slightly below BoW. Summing
-  word vectors captures meaning but loses some of the word-count signal.
-- **Model 3 (TF-IDF Weighted FastText)** is the weakest solo. TF-IDF
-  down-weights frequent words, but in beauty reviews those frequent words
-  ("love", "hate", "amazing") are exactly the ones that matter. Down-weighting
-  them actually removes signal.
+- **Model 1 (BoW)** — text only. Sparse word counts from review_text +
+  review_title. Word counts work well here because beauty reviews use very
+  predictable vocabulary — words like "love", "repurchase", "broke out"
+  carry strong signal.
+- **Model 2 (Unweighted FastText)** — text only (different representation).
+  Sum of 300-dim FastText vectors from review_text + review_title. Captures
+  semantic meaning but loses some word-count signal compared to BoW.
+- **Model 3 (TF-IDF Weighted FastText + metadata)** — text + structured.
+  TF-IDF weighted FastText vectors plus product metadata (price, brand,
+  avg_product_rating, product_rating_count, product_title). The weakest on
+  text alone, but the metadata gives it a different angle — it can factor in
+  *what* the product is, not just what the reviewer wrote.
 
-So why keep Model 3? Because the **ensemble of all three** beats any single
-model. Model 3 catches cases where rare/specific words matter (like a niche
-ingredient name or an unusual complaint) that the other two miss. Each model
-sees the data from a different angle, and averaging them together smooths out
-individual weaknesses.
+The **ensemble of all three** beats any single model. Models 1 and 2 provide
+two independent text-only views, while Model 3 adds structured context. Each
+model sees the data from a different angle, and averaging their probabilities
+smooths out individual weaknesses.
 
 ---
 
@@ -126,16 +130,16 @@ milestone2/
 │       ├── pages/               # Landing, Home, Search, ProductDetail, Dashboard
 │       └── components/          # ProductCard, Navbar
 ├── model/                       # Trained ML artifacts (~10 MB)
-│   ├── clf_bow.joblib           # BoW LogisticRegression classifier
-│   ├── pipe_unw.joblib          # Unweighted embeddings pipeline
-│   ├── pipe_w.joblib            # TF-IDF weighted embeddings pipeline
-│   ├── preproc_struct.joblib    # ColumnTransformer for metadata
+│   ├── clf_bow.joblib           # BoW LogReg (text only)
+│   ├── pipe_unw.joblib          # Unweighted embeddings pipeline (text only)
+│   ├── pipe_w.joblib            # TF-IDF weighted embeddings + metadata pipeline
+│   ├── preproc_struct.joblib    # ColumnTransformer for metadata (Model 3 only)
 │   ├── ft_vectors.npy           # FastText vectors (vocab subset)
 │   ├── tfidf.dict               # Gensim dictionary
 │   ├── tfidf.model              # Gensim TF-IDF model
 │   ├── vocab.txt                # 8,054-word vocabulary
 │   ├── stopwords_en.txt         # English stopwords
-│   └── threshold.json           # Decision threshold (0.3)
+│   └── threshold.json           # Tuned decision threshold
 ├── data/
 │   └── processed_with_images.csv  # Product + review data with images
 └── Dockerfile                   # Multi-stage production build
@@ -174,9 +178,9 @@ On a product page, there's a review form at the bottom (title, text, rating,
 name). When submitted, the backend:
 
 1. Cleans the text (tokenise, lowercase, remove stopwords + short tokens)
-2. Grabs the product metadata (brand, title, price, etc.)
-3. Runs all 3 models and averages the probabilities
-4. Applies the threshold (0.3) — above it means "Likely Buyer"
+2. Runs Models 1 & 2 on the text features only (BoW and unweighted embeddings)
+3. Grabs the product metadata and runs Model 3 (TF-IDF weighted embeddings + metadata)
+4. Averages the 3 probabilities and applies the threshold — above it means "Likely Buyer"
 
 The frontend then shows the prediction with per-model confidence bars. If
 the user disagrees with the label, they can override it. After confirming,

@@ -62,6 +62,25 @@ def predict(review_text, review_title, brand_name, product_title,
             price, avg_product_rating, product_rating_count):
     tokens = clean(review_text) + clean(review_title)
 
+    # Model 1: Bag-of-Words (text only — no metadata)
+    bow_counts = np.zeros(len(VOCAB))
+    for token in tokens:
+        idx = VOCAB.get(token)
+        if idx is not None:
+            bow_counts[idx] += 1
+    X_bow = csr_matrix(bow_counts.reshape(1, -1))
+    p_bow = float(clf_bow.predict_proba(X_bow)[0, 1])
+
+    # Model 2: Unweighted embeddings (text only — no metadata)
+    embedding = np.zeros(ft_vectors.shape[1])
+    for token in tokens:
+        idx = VOCAB.get(token)
+        if idx is not None:
+            embedding += ft_vectors[idx]
+    X_unw = embedding.reshape(1, -1)
+    p_unw = float(pipe_unw.predict_proba(X_unw)[0, 1])
+
+    # Model 3: TF-IDF weighted embeddings + metadata (text + structured)
     struct_input = pd.DataFrame([{
         "brand_name": brand_name,
         "product_title": product_title,
@@ -70,34 +89,10 @@ def predict(review_text, review_title, brand_name, product_title,
         "product_rating_count": product_rating_count,
     }])
     struct_sparse = preproc_struct.transform(struct_input)
-
-    # Model 1: Bag-of-Words
-    bow_counts = np.zeros(len(VOCAB))
-    for token in tokens:
-        idx = VOCAB.get(token)
-        if idx is not None:
-            bow_counts[idx] += 1
-    bow_sparse = csr_matrix(bow_counts.reshape(1, -1))
-    X_bow = sparse_hstack([bow_sparse, struct_sparse])
-    p_bow = float(clf_bow.predict_proba(X_bow)[0, 1])
-
-    # Model 2: Unweighted embeddings
-    embedding = np.zeros(ft_vectors.shape[1])
-    count = 0
-    for token in tokens:
-        idx = VOCAB.get(token)
-        if idx is not None:
-            embedding += ft_vectors[idx]
-            count += 1
-    embed_dense = embedding.reshape(1, -1)
     struct_dense = struct_sparse.toarray() if hasattr(struct_sparse, "toarray") else np.array(struct_sparse)
-    X_unw = np.hstack([embed_dense, struct_dense])
-    p_unw = float(pipe_unw.predict_proba(X_unw)[0, 1])
 
-    # Model 3: TF-IDF weighted embeddings
     bow_gensim = tfidf_dict.doc2bow(tokens)
     tfidf_weights = tfidf_model[bow_gensim]
-    # tfidf_dict maps token->id; we need to reverse-lookup the word for each id
     id2word = {v: k for k, v in tfidf_dict.token2id.items()}
     weighted_embedding = np.zeros(ft_vectors.shape[1])
     for word_id, weight in tfidf_weights:
